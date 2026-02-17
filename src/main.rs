@@ -24,9 +24,50 @@ fn main() -> anyhow::Result<()> {
 
         for h in 0..HEIGHT {
             for w in 0..WIDTH {
-                writer.write_all(&[0xff, 0, 0])?;
+                let frag_coord = Vec2::new(w as f64, (HEIGHT - h - 1) as f64);
+                let color = shader_main(frag_coord, time);
+
+                let r = (color.x.clamp(0.0, 1.0) * 255.0) as u8;
+                let g = (color.y.clamp(0.0, 1.0) * 255.0) as u8;
+                let b = (color.z.clamp(0.0, 1.0) * 255.0) as u8;
+
+                writer.write_all(&[r, g, b])?;
             }
         }
     }
     Ok(())
+}
+
+fn shader_main(frag_coord: Vec2, i_time: f64) -> Vec4 {
+    let i_resolution = Vec2::new(WIDTH as f64, HEIGHT as f64);
+
+    let i = frag_coord;
+    let mut o = Vec4::splat(0.0);
+
+    let v_res = i_resolution;
+
+    let p = (i + i - v_res) / v_res.y / 0.3;
+
+    let mut layer = 0.0;
+
+    while layer < 9.0 {
+        layer += 1.0;
+
+        let mut v = p;
+        let mut f = 0.0;
+        while f < 9.0 {
+            f += 1.0;
+            let yx_scaled = v.yx() * f;
+            let with_offset = yx_scaled + layer + i_time;
+            v += sin_vec2(with_offset) / f;
+        }
+
+        o += (cos_vec4(Vec4::new(layer, layer + 1.0, layer + 2.0, layer + 3.0)) + Vec4::splat(1.0))
+            / 6.0
+            / v.length();
+    }
+
+    o = (o * o).tanh();
+
+    o
 }
