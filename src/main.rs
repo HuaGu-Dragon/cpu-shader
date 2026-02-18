@@ -12,29 +12,36 @@ const MAX_COLOR_VALUE: usize = 255;
 
 fn main() -> anyhow::Result<()> {
     for frame in 0..60 {
-        let f = std::fs::File::create(format!("assets/output-{:02}.ppm", frame))
-            .context("create output.ppm")?;
-        let mut writer = BufWriter::new(f);
+        render_frame(frame)?;
+    }
 
-        writeln!(writer, "P6").context("write ppm format")?;
-        writeln!(writer, "{} {}", WIDTH, HEIGHT).context("write image's width & height")?;
-        writeln!(writer, "{}", MAX_COLOR_VALUE).context("write max color value")?;
+    Ok(())
+}
 
-        let time = frame as f64 / 60.0;
+fn render_frame(frame: i32) -> anyhow::Result<()> {
+    let f = std::fs::File::create(format!("assets/output-{:02}.ppm", frame))
+        .context("create output.ppm")?;
+    let mut writer = BufWriter::new(f);
 
-        for h in 0..HEIGHT {
-            for w in 0..WIDTH {
-                let frag_coord = Vec2::new(w as f64, (HEIGHT - h - 1) as f64);
-                let color = shader_main(frag_coord, time);
+    writeln!(writer, "P6").context("write ppm format")?;
+    writeln!(writer, "{} {}", WIDTH, HEIGHT).context("write image's width & height")?;
+    writeln!(writer, "{}", MAX_COLOR_VALUE).context("write max color value")?;
 
-                let r = (color.x.clamp(0.0, 1.0) * 255.0) as u8;
-                let g = (color.y.clamp(0.0, 1.0) * 255.0) as u8;
-                let b = (color.z.clamp(0.0, 1.0) * 255.0) as u8;
+    let time = frame as f64 / 60.0;
 
-                writer.write_all(&[r, g, b])?;
-            }
+    for h in 0..HEIGHT {
+        for w in 0..WIDTH {
+            let frag_coord = Vec2::new(w as f64, (HEIGHT - h - 1) as f64);
+            let color = shader_main(frag_coord, time);
+
+            let r = (color.x.clamp(0.0, 1.0) * 255.0) as u8;
+            let g = (color.y.clamp(0.0, 1.0) * 255.0) as u8;
+            let b = (color.z.clamp(0.0, 1.0) * 255.0) as u8;
+
+            writer.write_all(&[r, g, b])?;
         }
     }
+
     Ok(())
 }
 
