@@ -3,6 +3,7 @@ use cpu_shader::vec::{
     vec2::{Vec2, sin_vec2},
     vec4::{Vec4, cos_vec4},
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::io::{BufWriter, Write};
 
 const FACTOR: usize = 60;
@@ -11,9 +12,7 @@ const HEIGHT: usize = 9 * FACTOR;
 const MAX_COLOR_VALUE: usize = 255;
 
 fn main() -> anyhow::Result<()> {
-    for frame in 0..60 {
-        render_frame(frame)?;
-    }
+    (0..60).into_par_iter().try_for_each(render_frame)?;
 
     Ok(())
 }
