@@ -3,7 +3,7 @@ use cpu_shader::vec::{
     vec2::{Vec2, sin_vec2},
     vec4::{Vec4, cos_vec4},
 };
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::prelude::*;
 use std::io::{BufWriter, Write};
 
 const FACTOR: usize = 60;
@@ -28,18 +28,26 @@ fn render_frame(frame: i32) -> anyhow::Result<()> {
 
     let time = frame as f64 / 60.0;
 
-    for h in 0..HEIGHT {
-        for w in 0..WIDTH {
-            let frag_coord = Vec2::new(w as f64, (HEIGHT - h - 1) as f64);
-            let color = shader_main(frag_coord, time);
+    let pixels = (0..HEIGHT)
+        .into_par_iter()
+        .flat_map(|h| {
+            let mut row = Vec::with_capacity(WIDTH * 3);
+            for w in 0..WIDTH {
+                let frag_coord = Vec2::new(w as f64, (HEIGHT - h - 1) as f64);
+                let color = shader_main(frag_coord, time);
 
-            let r = (color.x.clamp(0.0, 1.0) * 255.0) as u8;
-            let g = (color.y.clamp(0.0, 1.0) * 255.0) as u8;
-            let b = (color.z.clamp(0.0, 1.0) * 255.0) as u8;
+                let r = (color.x.clamp(0.0, 1.0) * 255.0) as u8;
+                let g = (color.y.clamp(0.0, 1.0) * 255.0) as u8;
+                let b = (color.z.clamp(0.0, 1.0) * 255.0) as u8;
 
-            writer.write_all(&[r, g, b])?;
-        }
-    }
+                row.extend_from_slice(&[r, g, b]);
+            }
+
+            row
+        })
+        .collect::<Vec<_>>();
+
+    writer.write_all(&pixels[..]).context("write pixels")?;
 
     Ok(())
 }
